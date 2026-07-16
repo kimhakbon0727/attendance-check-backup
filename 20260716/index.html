@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>모임 출석부</title>
+<meta name="theme-color" content="#C1272D">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAF6EE;
+    --paper-2:#F1EAD9;
+    --ink:#242021;
+    --ink-soft:#6B6259;
+    --stamp-red:#C1272D;
+    --stamp-red-dark:#921E23;
+    --late-amber:#B9832E;
+    --absent-gray:#9C9488;
+    --line:#E4DBC8;
+    --white:#FFFDF8;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:'Noto Sans KR', system-ui, sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    overscroll-behavior:none;
+    user-select:none;
+  }
+  #app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:
+      radial-gradient(circle at 85% 4%, rgba(193,39,45,0.05), transparent 40%),
+      var(--paper);
+    position:relative;
+  }
+
+  /* Header */
+  header{
+    padding:22px 20px 14px;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    background:var(--paper);
+    position:sticky;
+    top:0;
+    z-index:5;
+  }
+  .brand{display:flex; flex-direction:column; gap:2px;}
+  .brand .eyebrow{
+    font-size:11px;
+    letter-spacing:0.16em;
+    color:var(--stamp-red);
+    font-weight:700;
+  }
+  #groupName{
+    font-family:'Gowun Batang', serif;
+    font-size:24px;
+    font-weight:700;
+    border:none;
+    background:transparent;
+    color:var(--ink);
+    padding:0;
+    width:100%;
+    max-width:260px;
+  }
+  #groupName:focus{outline:none; border-bottom:1px dashed var(--stamp-red);}
+  .stamp-mark{
+    width:46px; height:46px;
+    border-radius:50%;
+    border:2px solid var(--stamp-red);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Gowun Batang', serif;
+    color:var(--stamp-red);
+    font-weight:700;
+    font-size:18px;
+    transform:rotate(-8deg);
+    flex-shrink:0;
+  }
+
+  main{flex:1; padding:16px 16px 90px;}
+  section.view{display:none;}
+  section.view.active{display:block; animation:fadeIn .25s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  /* 출석 탭 */
+  .date-bar{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:10px 14px;
+    margin-bottom:16px;
+  }
+  .date-bar button{
+    background:none; border:none; font-size:18px; color:var(--ink-soft);
+    width:32px; height:32px; border-radius:50%;
+    cursor:pointer;
+  }
+  .date-bar button:active{background:var(--paper-2);}
+  .date-label{
+    font-weight:700; font-size:15px; text-align:center; flex:1;
+    display:flex; flex-direction:column; gap:1px;
+  }
+  .date-label .dow{font-size:11px; color:var(--ink-soft); font-weight:500;}
+  .session-count{
+    font-size:12px; color:var(--ink-soft); text-align:center; margin:-6px 0 16px;
+  }
+
+  .member-card{
+    display:flex; align-items:center; gap:14px;
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:12px 14px;
+    margin-bottom:10px;
+    transition:border-color .15s;
+  }
+  .member-card .name{
+    flex:1;
+    font-size:16px;
+    font-weight:500;
+  }
+  .status-tag{
+    font-size:11px;
+    color:var(--ink-soft);
+    min-width:34px;
+    text-align:center;
+  }
+  .stamp-btn{
+    width:56px; height:56px;
+    border-radius:50%;
+    border:2px solid var(--line);
+    background:var(--paper);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Gowun Batang', serif;
+    font-size:15px;
+    font-weight:700;
+    color:var(--ink-soft);
+    cursor:pointer;
+    transition:transform .12s ease, border-color .15s, color .15s, background .15s;
+    flex-shrink:0;
+  }
+  .stamp-btn:active{transform:scale(0.88);}
+  .stamp-btn.present{
+    border-color:var(--stamp-red);
+    color:var(--stamp-red);
+    background:#FDF0EF;
+  }
+  .stamp-btn.late{
+    border-color:var(--late-amber);
+    color:var(--late-amber);
+    background:#FBF3E6;
+  }
+  .stamp-btn.absent{
+    border-color:var(--absent-gray);
+    color:var(--absent-gray);
+    background:#F1EFEA;
+  }
+  .stamp-btn.stamped{animation:stampDown .32s ease;}
+  @keyframes stampDown{
+    0%{transform:scale(1.35) rotate(-14deg); opacity:0.4;}
+    55%{transform:scale(0.86) rotate(-4deg);}
+    100%{transform:scale(1) rotate(0);}
+  }
+
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--ink-soft);
+  }
+  .empty-state .stamp-mark{margin:0 auto 14px; transform:rotate(-8deg);}
+  .empty-state p{font-size:14px; line-height:1.6;}
+  .empty-state button{
+    margin-top:14px;
+    background:var(--stamp-red);
+    color:#fff;
+    border:none;
+    padding:10px 20px;
+    border-radius:999px;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+  }
+
+  /* 멤버 탭 */
+  .add-row{
+    display:flex; gap:8px; margin-bottom:16px;
+  }
+  .add-row input{
+    flex:1;
+    padding:12px 14px;
+    border-radius:12px;
+    border:1px solid var(--line);
+    background:var(--white);
+    font-size:15px;
+    font-family:inherit;
+  }
+  .add-row input:focus{outline:none; border-color:var(--stamp-red);}
+  .add-row button{
+    background:var(--stamp-red);
+    color:#fff;
+    border:none;
+    border-radius:12px;
+    padding:0 18px;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+  }
+  .add-row button:active{background:var(--stamp-red-dark);}
+  .member-row{
+    display:flex; align-items:center; gap:12px;
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:12px 14px;
+    margin-bottom:8px;
+  }
+  .member-row .idx{
+    font-family:'Gowun Batang', serif;
+    color:var(--stamp-red);
+    font-weight:700;
+    font-size:13px;
+    width:22px;
+  }
+  .member-row .name{flex:1; font-size:15px; font-weight:500;}
+  .member-row .del{
+    background:none; border:none; color:var(--ink-soft);
+    font-size:13px; cursor:pointer; padding:6px 8px;
+  }
+  .member-row .del:active{color:var(--stamp-red);}
+
+  /* 통계 탭 */
+  .stat-summary{
+    display:flex; gap:10px; margin-bottom:18px;
+  }
+  .stat-box{
+    flex:1;
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px;
+    text-align:center;
+  }
+  .stat-box .num{
+    font-family:'Gowun Batang', serif;
+    font-size:26px;
+    font-weight:700;
+    color:var(--stamp-red);
+    display:block;
+  }
+  .stat-box .lbl{font-size:11px; color:var(--ink-soft); margin-top:2px;}
+  .stat-row{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:10px;
+  }
+  .stat-row .top{
+    display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;
+  }
+  .stat-row .name{font-weight:700; font-size:15px;}
+  .stat-row .pct{font-family:'Gowun Batang', serif; font-weight:700; color:var(--stamp-red); font-size:15px;}
+  .bar-track{
+    height:8px; background:var(--paper-2); border-radius:999px; overflow:hidden;
+  }
+  .bar-fill{height:100%; background:var(--stamp-red); border-radius:999px; transition:width .4s ease;}
+  .stat-row .sub{font-size:11px; color:var(--ink-soft); margin-top:6px;}
+
+  .reset-zone{margin-top:24px; text-align:center;}
+  .reset-zone button{
+    background:none; border:1px solid var(--line); color:var(--ink-soft);
+    font-size:12px; padding:8px 16px; border-radius:999px; cursor:pointer;
+  }
+
+  /* Tab bar */
+  nav.tabbar{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    max-width:480px;
+    margin:0 auto;
+    background:var(--white);
+    border-top:1px solid var(--line);
+    display:flex;
+    padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+    z-index:10;
+  }
+  nav.tabbar button{
+    flex:1;
+    background:none; border:none;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    padding:6px 0;
+    color:var(--ink-soft);
+    font-size:11px;
+    font-weight:500;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  nav.tabbar button .ic{
+    width:22px; height:22px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  nav.tabbar button.active{color:var(--stamp-red); font-weight:700;}
+
+  .toast{
+    position:fixed; bottom:86px; left:50%; transform:translateX(-50%) translateY(10px);
+    background:var(--ink); color:#fff; font-size:13px;
+    padding:9px 18px; border-radius:999px;
+    opacity:0; pointer-events:none;
+    transition:opacity .2s, transform .2s;
+    z-index:20;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">
+      <span class="eyebrow">ATTENDANCE</span>
+      <input id="groupName" type="text" value="우리 모임" maxlength="20">
+    </div>
+    <div class="stamp-mark">出</div>
+  </header>
+
+  <main>
+    <!-- 출석 탭 -->
+    <section class="view active" id="view-checkin">
+      <div class="date-bar">
+        <button id="prevDay">‹</button>
+        <div class="date-label">
+          <span id="dateMain">-</span>
+          <span class="dow" id="dateDow">-</span>
+        </div>
+        <button id="nextDay">›</button>
+      </div>
+      <div class="session-count" id="sessionCount"></div>
+      <div id="memberList"></div>
+      <div class="empty-state" id="emptyMembers" style="display:none">
+        <div class="stamp-mark">出</div>
+        <p>아직 등록된 멤버가 없어요.<br>멤버 탭에서 모임 구성원을 추가해 주세요.</p>
+        <button onclick="switchView('members')">멤버 추가하러 가기</button>
+      </div>
+    </section>
+
+    <!-- 멤버 탭 -->
+    <section class="view" id="view-members">
+      <div class="add-row">
+        <input id="newMemberInput" type="text" placeholder="이름 입력" maxlength="12">
+        <button id="addMemberBtn">추가</button>
+      </div>
+      <div id="memberManageList"></div>
+    </section>
+
+    <!-- 통계 탭 -->
+    <section class="view" id="view-stats">
+      <div class="stat-summary">
+        <div class="stat-box"><span class="num" id="statSessions">0</span><span class="lbl">총 모임 횟수</span></div>
+        <div class="stat-box"><span class="num" id="statMembers">0</span><span class="lbl">등록 인원</span></div>
+        <div class="stat-box"><span class="num" id="statAvg">0%</span><span class="lbl">평균 출석률</span></div>
+      </div>
+      <div id="statList"></div>
+      <div class="reset-zone">
+        <button id="resetBtn">전체 기록 초기화</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab-btn active" data-view="checkin">
+      <span class="ic">✔︎</span>출석체크
+    </button>
+    <button class="tab-btn" data-view="members">
+      <span class="ic">☺</span>멤버
+    </button>
+    <button class="tab-btn" data-view="stats">
+      <span class="ic">▤</span>통계
+    </button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ---------- Storage ----------
+const STORE_KEY = "attendance_pwa_data_v1";
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return { groupName:"우리 모임", members:[], records:{} };
+}
+function saveData(){
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+let data = loadData();
+
+// ---------- State ----------
+let currentDate = new Date();
+currentDate.setHours(0,0,0,0);
+
+function fmtDate(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function dowKor(d){
+  return ["일","월","화","수","목","금","토"][d.getDay()]+"요일";
+}
+function isToday(d){
+  const t = new Date(); t.setHours(0,0,0,0);
+  return fmtDate(d)===fmtDate(t);
+}
+
+// ---------- Views ----------
+const views = ["checkin","members","stats"];
+function switchView(name){
+  views.forEach(v=>{
+    document.getElementById("view-"+v).classList.toggle("active", v===name);
+  });
+  document.querySelectorAll(".tab-btn").forEach(b=>{
+    b.classList.toggle("active", b.dataset.view===name);
+  });
+  if(name==="members") renderMemberManage();
+  if(name==="stats") renderStats();
+}
+document.querySelectorAll(".tab-btn").forEach(b=>{
+  b.addEventListener("click", ()=>switchView(b.dataset.view));
+});
+
+// ---------- Toast ----------
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("show"), 1500);
+}
+
+// ---------- Header / group name ----------
+const groupNameInput = document.getElementById("groupName");
+groupNameInput.value = data.groupName || "우리 모임";
+groupNameInput.addEventListener("change", ()=>{
+  data.groupName = groupNameInput.value.trim() || "우리 모임";
+  saveData();
+});
+
+// ---------- Check-in view ----------
+const STATUS_CYCLE = [null, "present", "late", "absent"];
+const STATUS_LABEL = {present:"출석", late:"지각", absent:"결석"};
+const STATUS_CHAR = {present:"出", late:"遅", absent:"缺"};
+
+function renderDateBar(){
+  document.getElementById("dateMain").textContent = isToday(currentDate) ? `오늘 · ${fmtDate(currentDate).slice(5)}` : fmtDate(currentDate);
+  document.getElementById("dateDow").textContent = dowKor(currentDate);
+}
+
+function renderMemberList(){
+  const list = document.getElementById("memberList");
+  const empty = document.getElementById("emptyMembers");
+  list.innerHTML = "";
+  if(data.members.length===0){
+    empty.style.display="block";
+    document.getElementById("sessionCount").textContent = "";
+    return;
+  }
+  empty.style.display="none";
+  const key = fmtDate(currentDate);
+  const dayRecord = data.records[key] || {};
+
+  data.members.forEach(m=>{
+    const status = dayRecord[m.id] || null;
+    const card = document.createElement("div");
+    card.className = "member-card";
+    card.innerHTML = `
+      <div class="name">${escapeHtml(m.name)}</div>
+      <div class="status-tag">${status ? STATUS_LABEL[status] : "미체크"}</div>
+      <button class="stamp-btn ${status||''}" data-id="${m.id}">${status ? STATUS_CHAR[status] : "찍기"}</button>
+    `;
+    list.appendChild(card);
+  });
+
+  const total = countSessionsUpTo();
+  document.getElementById("sessionCount").textContent = `이 날짜까지 총 ${total}회 진행됨`;
+
+  list.querySelectorAll(".stamp-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.dataset.id;
+      const key = fmtDate(currentDate);
+      if(!data.records[key]) data.records[key] = {};
+      const cur = data.records[key][id] || null;
+      const idx = STATUS_CYCLE.indexOf(cur);
+      const next = STATUS_CYCLE[(idx+1) % STATUS_CYCLE.length];
+      if(next===null){
+        delete data.records[key][id];
+      }else{
+        data.records[key][id] = next;
+      }
+      // clean up empty day record
+      if(Object.keys(data.records[key]).length===0) delete data.records[key];
+      saveData();
+      renderMemberList();
+      const newBtn = list.querySelector(`.stamp-btn[data-id="${id}"]`);
+      if(newBtn && next){
+        newBtn.classList.add("stamped");
+        setTimeout(()=>newBtn.classList.remove("stamped"), 320);
+      }
+    });
+  });
+}
+
+function countSessionsUpTo(){
+  const cur = fmtDate(currentDate);
+  return Object.keys(data.records).filter(k=>k<=cur).length;
+}
+
+document.getElementById("prevDay").addEventListener("click", ()=>{
+  currentDate.setDate(currentDate.getDate()-1);
+  renderDateBar(); renderMemberList();
+});
+document.getElementById("nextDay").addEventListener("click", ()=>{
+  currentDate.setDate(currentDate.getDate()+1);
+  renderDateBar(); renderMemberList();
+});
+
+function escapeHtml(str){
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ---------- Members management ----------
+function genId(){
+  return 'm_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+document.getElementById("addMemberBtn").addEventListener("click", addMember);
+document.getElementById("newMemberInput").addEventListener("keydown", e=>{
+  if(e.key==="Enter") addMember();
+});
+function addMember(){
+  const input = document.getElementById("newMemberInput");
+  const name = input.value.trim();
+  if(!name){ showToast("이름을 입력해 주세요"); return; }
+  data.members.push({id:genId(), name});
+  saveData();
+  input.value = "";
+  renderMemberManage();
+  showToast(`${name} 님을 추가했어요`);
+}
+function renderMemberManage(){
+  const list = document.getElementById("memberManageList");
+  list.innerHTML = "";
+  data.members.forEach((m,i)=>{
+    const row = document.createElement("div");
+    row.className = "member-row";
+    row.innerHTML = `
+      <div class="idx">${String(i+1).padStart(2,'0')}</div>
+      <div class="name">${escapeHtml(m.name)}</div>
+      <button class="del" data-id="${m.id}">삭제</button>
+    `;
+    list.appendChild(row);
+  });
+  list.querySelectorAll(".del").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.dataset.id;
+      const m = data.members.find(x=>x.id===id);
+      if(!confirm(`${m ? m.name : '이 멤버'}를 삭제할까요? 출석 기록도 함께 사라져요.`)) return;
+      data.members = data.members.filter(x=>x.id!==id);
+      Object.keys(data.records).forEach(day=>{
+        delete data.records[day][id];
+        if(Object.keys(data.records[day]).length===0) delete data.records[day];
+      });
+      saveData();
+      renderMemberManage();
+    });
+  });
+}
+
+// ---------- Stats ----------
+function renderStats(){
+  const totalSessions = Object.keys(data.records).length;
+  document.getElementById("statSessions").textContent = totalSessions;
+  document.getElementById("statMembers").textContent = data.members.length;
+
+  const perMember = data.members.map(m=>{
+    let present=0, late=0, absent=0, checked=0;
+    Object.values(data.records).forEach(day=>{
+      const s = day[m.id];
+      if(s){
+        checked++;
+        if(s==="present") present++;
+        else if(s==="late") late++;
+        else if(s==="absent") absent++;
+      }
+    });
+    const rate = totalSessions>0 ? Math.round(((present+late)/totalSessions)*100) : 0;
+    return {m, present, late, absent, rate};
+  });
+
+  const avg = perMember.length>0
+    ? Math.round(perMember.reduce((s,p)=>s+p.rate,0)/perMember.length)
+    : 0;
+  document.getElementById("statAvg").textContent = avg+"%";
+
+  const listEl = document.getElementById("statList");
+  listEl.innerHTML = "";
+  if(perMember.length===0){
+    listEl.innerHTML = `<div class="empty-state"><p>멤버를 추가하고 출석을 기록하면<br>여기에 통계가 표시돼요.</p></div>`;
+    return;
+  }
+  perMember.sort((a,b)=>b.rate-a.rate);
+  perMember.forEach(p=>{
+    const row = document.createElement("div");
+    row.className = "stat-row";
+    row.innerHTML = `
+      <div class="top">
+        <span class="name">${escapeHtml(p.m.name)}</span>
+        <span class="pct">${p.rate}%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${p.rate}%"></div></div>
+      <div class="sub">출석 ${p.present} · 지각 ${p.late} · 결석 ${p.absent} (총 ${totalSessions}회 중)</div>
+    `;
+    listEl.appendChild(row);
+  });
+}
+
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+  if(!confirm("모든 출석 기록을 초기화할까요? 멤버 명단은 유지돼요.")) return;
+  data.records = {};
+  saveData();
+  renderStats();
+  renderMemberList();
+  showToast("출석 기록을 초기화했어요");
+});
+
+// ---------- Init ----------
+renderDateBar();
+renderMemberList();
+
+// ---------- Service worker ----------
+if("serviceWorker" in navigator){
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("service-worker.js").catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
